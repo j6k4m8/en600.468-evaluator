@@ -1,33 +1,66 @@
 #!/usr/bin/env python
-import argparse # optparse is deprecated
+import argparse
 from itertools import islice # slicing for iterators
 
-def word_matches(h, ref):
-    return sum(1 for w in h if w in ref)
+class Evaluators:
+
+    @staticmethod
+    def DEFAULT(hyp, ref):
+        return 1
+
+    @staticmethod
+    def WORD_MATCHES(h, ref):
+        return sum(2 for w in h if w in ref)
+
+def evaluate(h1, h2, ref, eval_fn=Evaluators.DEFAULT):
+    """
+    Evaulates two hypotheses against a reference, using evaluator function
+    as specified in eval_fn. This is a simple wrapper for the evaluator to
+    prevent making changes to main().
+
+    Arguments:
+        h1 (str): The first hypothesis
+        h2 (str): The second hypothesis
+        ref (str): The reference sentence
+        eval_fn (enum): Which function to use to evaluate.
+
+    Returns:
+        int in (-1, 0, 1), 1 if 1 is better, -1, if 2 is better
+    """
+    res1 = eval_fn(h1, ref)
+    res2 = eval_fn(h2, ref)
+
+    if res1 > res2:
+        return 1
+    elif res2 > res1:
+        return -1
+    else:
+        return 0
+
 
 def main():
-    parser = argparse.ArgumentParser(description='Evaluate translation hypotheses.')
+    parser = argparse.ArgumentParser(description='Evaluate hypotheses.')
     parser.add_argument('-i', '--input', default='data/hyp1-hyp2-ref',
-            help='input file (default data/hyp1-hyp2-ref)')
+                        help='input file (default data/hyp1-hyp2-ref)')
     parser.add_argument('-n', '--num_sentences', default=None, type=int,
-            help='Number of hypothesis pairs to evaluate')
-    # note that if x == [1, 2, 3], then x[:None] == x[:] == x (copy); no need for sys.maxint
+                        help='Number of hypothesis pairs to evaluate')
     opts = parser.parse_args()
 
     # we create a generator and avoid loading all sentences into a list
     def sentences():
         with open(opts.input) as f:
             for pair in f:
-                yield [sentence.strip().split() for sentence in pair.split(' ||| ')]
+                yield [
+                    sentence.strip().split()
+                    for sentence in pair.split(' ||| ')]
 
-    # note: the -n option does not work in the original code
     for h1, h2, ref in islice(sentences(), opts.num_sentences):
-        rset = set(ref)
-        h1_match = word_matches(h1, rset)
-        h2_match = word_matches(h2, rset)
-        print(1 if h1_match > h2_match else # \begin{cases}
-                (0 if h1_match == h2_match
-                    else -1)) # \end{cases}
+        # We have two hypotheses and a reference.
+        # We excise the logic to evaluate these hypotheses to an external
+        # function so that we can easily make modifications to the protocol
+        # without having to rewrite main().
+        print evaluate(h1, h2, ref, Evaluators.WORD_MATCHES)
+
 
 # convention to allow import of this file as a module
 if __name__ == '__main__':
