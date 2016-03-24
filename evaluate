@@ -126,7 +126,7 @@ def main():
         # without having to rewrite main().
         print evaluate(h1, h2, ref, [
             (Evaluators.METEOR, 0.75),
-            (Evaluators.WORDNET, 0.5),
+            # (Evaluators.WORDNET, 0.5),
         ])
 
 
