@@ -55,6 +55,21 @@ METEOR is naïve and still fails on cases where sentences use synonyms. It also 
 \subsubsection{Results}
 This implementation functions notably better than the baseline implementation, reaching approximately $50\%$ accuracy on the provided dataset. For further evaluation statistics, see \textit{Figure \ref{fig:meteoralpha}}.
 
+\subsection{Quorum}
+After performing the above implementations, I decided to try to improve the accuracy at the expense of performance by running multiple algorithms and having them reach `quorum'. To do this, I modified the \texttt{evaluate} function to take an array of tuples for \texttt{eval\_fns}, in the form:
+
+$$(function, weight)$$
+
+Using only METEOR and $n=20$, I arrived at an accuracy of $0.5$. Using the Quorum implementation mixing METEOR at 75\% weight and WORDNET at 25\% weight, I arrived at an accuracy of 0.55.
+
+\subsubsection{Advantages}
+On $n=20$, accuracy from METEOR alone (0.5) was improved by combining with WORDNET (combined, led to $A=0.55$).
+
+\subsubsection{Disadvantages}
+Naturally, the combined algorithm takes considerably longer to run, and if WORDNET is among the utilized algorithms, it performs far slower (as WORDNET requires HTTP calls).
+
+To improve timing, I added a dynamic element that added words and their synonyms to a dictionary (local) as it encountered them over HTTP, so that subsequent calls ran faster. For timing figures, see \textit{Figure \ref{fig:dynamic}}.
+
 
 
 
@@ -88,11 +103,18 @@ A = 0.508135 & ($\alpha=0.75$)     &     &
 \end{tabular}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \caption{A plot of $\alpha$ values ($x$) against accuracy ($y$).}
 \label{fig:meteoralpha}
 \centering
 \includegraphics[width=0.5\textwidth]{figure_1}
+\end{figure}
+
+\begin{figure}[ht]
+\caption{Naive speeds when running WORDNET (red) compared with dynamic version (blue), which saves the encountered words to a local dictionary for faster lookup.}
+\label{fig:dynamic}
+\centering
+\includegraphics[width=0.5\textwidth]{figure_2}
 \end{figure}
 
 \end{document}
