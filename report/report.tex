@@ -13,6 +13,9 @@
 \maketitle
 
 \section{Introduction}
+This code uses either an online (i.e. from the web) WordNet API (via HTTP RESTful API) or an offline synonym-lookup, via the nltk Python package. If you have the Python package available, a far faster implementation is available.
+
+It is worth noting that the two syn-nets vary slightly.
 
 \section{Improvement Strategies}
 
@@ -35,6 +38,8 @@ This protocol supposedly casts a wider net to find more sentences that may have 
 
 \subsubsection{Disadvantages}
 Because this system relies on an internet connection and the WordNet API, it is very slow to execute (in my trials, it took nearly nine wallclock minutes to run 100 sentences). Moreover, accuracy is diminished, as it appears that this `dragnet' approach considers too many sentences to be correct.
+
+When using the downloaded nltk version (in the absence of which, the Python execution should fail gracefully), a very small weight in the WORDNET function, along with a small weight in the Quorum function (explained below) results in better-than-METEOR-alone performance.
 
 \subsubsection{Results}
 \textit{See Table 1.}  From the above information, it is likely that the strategy used here is useful for tie-breaking, but is not a viable strategy as a standalone device.

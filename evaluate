@@ -3,9 +3,51 @@ import argparse
 from itertools import islice # slicing for iterators
 import requests
 
-ALTERVISTA_KEY = '4UJdDj8dOAEoUDzf3uMj'
+try:
+    from nltk.corpus import wordnet as wn
+    LOCAL_WORDNET = True
+except:
+    LOCAL_WORDNET = False
 
+ALTERVISTA_KEY = '4UJdDj8dOAEoUDzf3uMj'
 SYNONYMS = {}
+
+
+def is_ascii(s):
+    return all(ord(c) < 128 for c in s)
+
+
+def get_synonyms(word):
+
+    if not is_ascii(word):
+        return set()
+
+    if word in SYNONYMS:
+        return SYNONYMS[word]
+
+    if LOCAL_WORDNET:
+        synonyms = set()
+        for syn in wn.synsets(word):
+            synonyms.update(syn.lemma_names())
+        SYNONYMS[word] = synonyms
+        return synonyms
+    else:
+        resp = requests.get('http://thesaurus.altervista.org/'
+                            'thesaurus/v1?word={}&language=en_US'
+                            '&key={}&output=json'
+                            .format(w, ALTERVISTA_KEY)).json()
+        if 'error' in resp:
+            return []
+        synonyms = set([
+            syn.split(' ')[0] for syn in (
+                '|'.join(
+                    [resp['response'][i]['list']['synonyms']
+                    for i in range(len(resp['response']))])
+                .split('|')
+            )
+        ])
+        SYNONYMS[word] = synonyms
+        return synonyms
 
 class Evaluators:
 
@@ -21,7 +63,7 @@ class Evaluators:
         return sum(1 for w in h if w in ref)
 
     @staticmethod
-    def WORDNET(h, ref, weight=0.5):
+    def WORDNET(h, ref, weight=0.15):
         """
         Identical to WORD_MATCHES, but synonym matches are weighted according
         to `weight`. ("ball|ball" = 1, "ball|sphere" = weight)
@@ -31,28 +73,11 @@ class Evaluators:
             if w in ref:
                 running += 1
             else:
-                if w in SYNONYMS:
-                    if w in SYNONYMS[w]:
+                syns = get_synonyms(w)
+                for s in syns:
+                    if s in ref:
                         running += weight
-                else:
-                    # Check if a synonym is in the reference instead:
-                    resp = requests.get('http://thesaurus.altervista.org/'
-                                        'thesaurus/v1?word={}&language=en_US'
-                                        '&key={}&output=json'
-                                        .format(w, ALTERVISTA_KEY)).json()
-                    if 'error' in resp:
-                        continue
-                    synonyms = set([
-                        syn.split(' ')[0] for syn in (
-                            '|'.join(
-                                [resp['response'][i]['list']['synonyms']
-                                for i in range(len(resp['response']))])
-                            .split('|')
-                        )
-                    ])
-                    SYNONYMS[w] = synonyms
-                    if w in synonyms:
-                        running += weight
+                        break
         return running
 
     @staticmethod
@@ -125,8 +150,8 @@ def main():
         # function so that we can easily make modifications to the protocol
         # without having to rewrite main().
         print evaluate(h1, h2, ref, [
-            (Evaluators.METEOR, 0.75),
-            # (Evaluators.WORDNET, 0.5),
+            (Evaluators.METEOR, 0.85),
+            (Evaluators.WORDNET, 0.25),
         ])
 
 
